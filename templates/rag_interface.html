@@ -5,22 +5,29 @@
     <title>Roleplaying Expert</title>
 </head>
 <body style="background-color: #000000; color: #999999">
-    <form action="/" method="POST">
-      <label>
-        <input type="text" name="user_input" placeholder="Talk to the expert"/>
-      </label><br/>
-      <label>
-        <input type="radio" name="mode" value="chat">Chat
-      </label><br/>
-      <label>
-        <input type="radio" name="mode" value="character">Generate Characters
-      </label><br/>
-      <label>
-        <input type="radio" name="mode" value="scenario">Generate Scenarios
-      </label><br/>
-      <button type="submit" value="submit">send</button>
-    </form>
-    <br/>
-    <p>{{response}}</p>
+    <div style="visibility:{{upload_visibility}}">
+        <form action="/uploads" method="GET">
+            <button type="submit" value="submit">upload a rules pdf</button>
+        </form>
+    </div>
+    <div style="visibility:{{conversation_visibility}}">
+        <form action="/" method="POST">
+          <label>
+            <input type="text" name="user_input" placeholder="Talk to the expert"/>
+          </label><br/>
+          <label>
+            <input type="radio" name="mode" value="chat">Chat
+          </label><br/>
+          <label>
+            <input type="radio" name="mode" value="character">Generate Characters
+          </label><br/>
+          <label>
+            <input type="radio" name="mode" value="scenario">Generate Scenarios
+          </label><br/>
+          <button type="submit" value="submit">send</button>
+        </form>
+        <br/>
+        <p>{{response}}</p>
+    </div>
 </body>
 </html>
