@@ -8,4 +8,4 @@ hook up the radio buttons to switch prompts and temperatures behind the scenes t
 
 improve the crusty appearance of the web interface
 
-How about support for multiple concurrent users? Will have to be a waiting queue though or my hardware will catch fire.
+We have sessions now for multiple users, but still need a waiting queue for the actual LLM or my hardware will catch fire.
