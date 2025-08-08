@@ -7,23 +7,22 @@ import ollama
 from langchain_core.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
 from dbwriter import DBWriter
 from pdfingestor import PDFIngestor
-from flask import Flask, flash, render_template, request, redirect, url_for
+from flask import Flask, flash, render_template, request, redirect, session
 from werkzeug.utils import secure_filename
+import secrets
 
 ACTIVE_LLM = "qwen3:14b"
 ConversationModel = OllamaLLM(model=ACTIVE_LLM, temperature=0.3)
 
 def ingest_book_pdf(filename: str):
-    if DBWriter.db_needs_generated(filename):
+    if not DBWriter.does_collection_exist_for_pdf(filename):
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         content = PDFIngestor.read_pdf_file(filepath)
         content = PDFIngestor.clean_extracted_text(content)
         chunks = PDFIngestor.chunk_text(content)
         embedded_texts = DBWriter.static_ollama_embeddings.embed_documents(chunks)
         ids = [f"{i}" for i in range(len(chunks))]
-        DBWriter.get_collection(filename).add(ids, embeddings=embedded_texts, documents=chunks)
-    return DBWriter.get_collection(filename)
-
+        DBWriter.get_collection_for_pdf(filename).add(ids, embeddings=embedded_texts, documents=chunks)
 
 UPLOAD_FOLDER = "./uploads"
 ALLOWED_EXTENSIONS = {"pdf"}
@@ -49,19 +48,28 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 app = Flask(__name__)
+secret_key = secrets.token_hex(16)
+app.config['SECRET_KEY'] = secret_key
+app.config.from_object(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 @app.get('/')
-def show_form():
-    return render_template('rag_interface.html', response="", conversation_visibility=DBWriter.is_pdf_assigned(), upload_visiblity=not DBWriter.is_pdf_assigned())
+def show_base_form():
+    if 'pdf_filename' in session and session['pdf_filename'] is not None:
+        return render_template('rag_interface.html', response="", conversation_visibility=True, upload_visiblity=False)
+    return render_template('rag_interface.html', response="", conversation_visibility=False, upload_visiblity=True)
 
 @app.post('/')
 def submit():
+    if session['pdf_filename'] is None:
+        return show_base_form()
+    pdf_filename = session['pdf_filename']
     text_input = request.form.get('user_input')
-    return run_agent(text_input)
+    return run_agent(text_input, pdf_filename)
 
-def run_agent(user_input):
+def run_agent(user_input, pdf_filename: str):
     rag_chain = ({
-                     'context': DBWriter.get_retriever(),
+                     'context': DBWriter.get_retriever_for_pdf(pdf_filename),
                      'input': RunnablePassthrough()
                  } | prompt_template | ConversationModel | StrOutputParser()
                  )
@@ -81,6 +89,7 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            session['pdf_filename'] = filename
             ingest_book_pdf(file.filename)
             return redirect('/')
     return '''

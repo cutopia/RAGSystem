@@ -8,7 +8,12 @@ class PDFIngestor:
     def read_pdf_file(pdf_filename: str) -> str:
         pdf_reader = PdfReader(pdf_filename)
         print(f"PDF {pdf_filename} loaded found {len(pdf_reader.pages)} pages")
-        raw_text = 'title: ' + pdf_reader.metadata.title + ' by ' + pdf_reader.metadata.author + ' \n '
+        raw_text = ''
+        # attach the title and author metadata if available so the LLM can tell what book this is.
+        if pdf_reader.metadata.title is None or pdf_reader.metadata.author is None:
+            print("PDF {pdf_filename} has missing or incomplete metadata.")
+        else:
+            raw_text = raw_text + 'title: ' + pdf_reader.metadata.title + ' by ' + pdf_reader.metadata.author + ' \n '
         for page_num, page in enumerate(pdf_reader.pages):
             page_text = page.extract_text()
             raw_text += page_text
